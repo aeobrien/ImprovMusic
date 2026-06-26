@@ -4,6 +4,7 @@
 
 ## Status
 
+**Lane:** personal
 **Phase:** Phase 1 — Data Model and Music Theory Layer (not yet started)
 **Last updated:** 2026-04-07
 
