@@ -1,0 +1,23 @@
+{
+  "capture_finished_at_utc": "2026-07-24T02:00:18Z",
+  "capture_started_at_utc": "2026-07-24T01:59:29Z",
+  "captured_at_utc": "2026-07-24T01:59:29Z",
+  "captured_byte_estimate": 348583,
+  "captured_path_count": 66,
+  "consistency_retry_count": 0,
+  "excluded": [],
+  "github_hard_limit_bytes": 100000000,
+  "guardian_version": "2.0-sidecar",
+  "head_state": "symbolic",
+  "host": "aidans-laptop",
+  "racy_capture": false,
+  "repository_id": "ImprovMusic-72d243a490b6",
+  "schema_version": 1,
+  "snapshot_blob_threshold_bytes": 94371840,
+  "snapshot_consistency": "stable",
+  "source_branch": "main",
+  "source_head_oid": "d17304599fa41108cdc0c0e768f6606cefab65c3",
+  "source_index_sha256": "a75e96a93da7f59dc03765bd9a55d19b09d0ddfdc38e6f541a1fab29eda3b57b",
+  "source_path": "/Users/aidan/Dev/ImprovMusic",
+  "upstream_observed": "origin/main"
+}
