@@ -1,0 +1,136 @@
+project_shape:
+  scale: multi-subsystem
+  has_subsystem_layer: true
+  expected_modules: "8-12"
+  kind: product
+
+modules:
+  - id: improvmusic.music-theory-layer.pitch-scale-primitives
+    project: ImprovMusic
+    subsystem: Music Theory Layer
+    name: Pitch and Scale Primitives
+    capability: Represents chromatic pitch classes, note spelling preferences, and the six supported scale recipes and their collection math.
+    status: working
+    approach: Uses custom Swift value types and enums to model pitch classes, conventional sharp/flat spelling, scale intervals, parent-major mapping, and circle-of-fifths-derived collection IDs.
+    tech: [Swift, Foundation]
+    io: { in: "Pitch class integers and scale type selections", out: "Normalised pitch classes, display spellings, ordered scale degrees, and pitch-class sets" }
+    code_refs: [ImprovMusic/Models/PitchClass.swift, ImprovMusic/Models/ScaleType.swift, ImprovMusic/Utilities/CircleOfFifths.swift, docs/tonic-evaluation.md]
+    known_gaps: []
+    match_keywords: [pitch-class, enharmonic-spelling, scale-recipes, modes, circle-of-fifths, music-theory-primitives]
+
+  - id: improvmusic.music-theory-layer.tonal-context-harmony
+    project: ImprovMusic
+    subsystem: Music Theory Layer
+    name: Tonal Context and Diatonic Harmony
+    capability: Expands a tonic plus scale type into a full tonal context with display name, pitch set, and generated diatonic triads and seventh chords.
+    status: working
+    approach: Computes all 72 contexts from the custom theory layer and derives chord qualities and basic harmonic functions with deterministic interval checks.
+    tech: [Swift, Foundation]
+    io: { in: "Tonic and scale type", out: "Tonal contexts, diatonic triads, seventh chords, harmonic functions, and all-node enumerations" }
+    code_refs: [ImprovMusic/Models/TonalContext.swift, ImprovMusic/Models/Chord.swift, ImprovMusic/Models/DiatonicChordGenerator.swift]
+    known_gaps: ["Harmonic-function labels are assigned only for major and natural minor; modal contexts fall back to unassigned.", "Locrian, harmonic minor, and melodic minor are intentionally excluded from the supported context set."]
+    match_keywords: [tonal-context, diatonic-chords, roman-numerals, harmonic-function, key-model, modal-harmony]
+
+  - id: improvmusic.modulation-graph.distance-scoring
+    project: ImprovMusic
+    subsystem: Modulation Graph
+    name: Modulation Distance Scoring
+    capability: Measures how far two tonal contexts are from each other using pitch-set, region, tonic, mode, common-chord, and cadence-support features.
+    status: partial
+    approach: Builds a composite distance vector and applies fixed heuristic weights and penalties to turn musical features into edge costs.
+    tech: [Swift, Foundation]
+    io: { in: "Source and target tonal contexts", out: "Distance vectors and weighted base costs for modulation edges" }
+    code_refs: [ImprovMusic/Models/DistanceVector.swift, ledger/PROJECT.md, ledger/ROADMAP.md, docs/manual-tests/phase-2-modulation-graph.md]
+    known_gaps: ["Distance weights are hard-coded defaults and the ledger explicitly says empirical calibration is still pending.", "The cost model is heuristic rather than data-tuned, so difficulty feel is still expected to change."]
+    match_keywords: [distance-metric, modulation-cost, feature-scoring, difficulty-heuristics, circle-of-fifths-distance, music-similarity]
+
+  - id: improvmusic.modulation-graph.edge-generation
+    project: ImprovMusic
+    subsystem: Modulation Graph
+    name: Modulation Edge Generation
+    capability: Produces single-step modulation candidates for pivot-chord, common-tone, mixture-assisted, direct, and enharmonic techniques.
+    status: partial
+    approach: Runs five custom generator modules that inspect diatonic chord overlap and simple reinterpretation rules, then emit one or more weighted edges with musical evidence.
+    tech: [Swift, Foundation]
+    io: { in: "Source and target tonal contexts plus a distance vector", out: "Directed modulation edges annotated with technique, cost, and evidence" }
+    code_refs: [ImprovMusic/EdgeGenerators/PivotChordGenerator.swift, ImprovMusic/EdgeGenerators/CommonToneGenerator.swift, ImprovMusic/EdgeGenerators/MixtureAssistedGenerator.swift, ImprovMusic/EdgeGenerators/DirectModulationGenerator.swift, ImprovMusic/EdgeGenerators/EnharmonicGenerator.swift, ImprovMusic/Models/ModulationEdge.swift]
+    known_gaps: ["Mixture-assisted generation only borrows from parallel major or minor and ignores richer borrowed-chord vocabularies.", "Enharmonic handling is narrowly coded around dominant-7th and diminished-7th cases rather than a broader reinterpretation engine.", "Each generator emits a best-fit edge rather than preserving a larger set of musically valid alternatives."]
+    match_keywords: [modulation-techniques, pivot-chord, common-tone, mode-mixture, enharmonic-reinterpretation, graph-edge-generation]
+
+  - id: improvmusic.modulation-graph.graph-assembly
+    project: ImprovMusic
+    subsystem: Modulation Graph
+    name: Graph Assembly and Querying
+    capability: Precomputes the full tonal-context graph and serves adjacency and cheapest-edge queries over the resulting multigraph.
+    status: working
+    approach: Enumerates all ordered pairs of the 72 tonal contexts, runs every edge generator, and indexes the resulting edges by source-node ID for lookup.
+    tech: [Swift, Foundation]
+    io: { in: "All tonal contexts and generator outputs", out: "A directed weighted modulation multigraph with adjacency and cheapest-edge accessors" }
+    code_refs: [ImprovMusic/Models/GraphBuilder.swift, ImprovMusic/Models/ModulationGraph.swift, docs/manual-tests/phase-2-modulation-graph.md]
+    known_gaps: ["Graph caching is in-memory only; the ledger still treats persistent serialisation as an open performance question."]
+    match_keywords: [weighted-graph, graph-builder, adjacency-index, multigraph, modulation-network, precomputation]
+
+  - id: improvmusic.engine.challenge-generation
+    project: ImprovMusic
+    subsystem: Engine
+    name: Challenge Generation and Session State
+    capability: Advances the current key, filters reachable targets by difficulty, avoids recent repeats, and issues the next practice challenge.
+    status: working
+    approach: Uses a prebuilt modulation graph with rule-based tier assignment, sparse-pool widening, weighted random selection, and a small recent-history buffer inside an observable Swift engine.
+    tech: [Swift, Foundation, Combine, Timer]
+    io: { in: "Current tonal context, selected max tier, trigger mode, and timer events", out: "Current session state and generated challenges with chosen targets and tiers" }
+    code_refs: [ImprovMusic/Engine/ChallengeEngine.swift, ImprovMusic/Engine/DifficultyTier.swift, docs/manual-tests/phase-3-challenge-engine.md]
+    known_gaps: ["Tier assignment is rule-based and depends on the still-uncalibrated edge-cost heuristics.", "Recent-target avoidance uses a fixed buffer of five contexts and does not learn from longer-term practice history."]
+    match_keywords: [challenge-generator, difficulty-tiering, session-state, weighted-random-selection, spaced-variety, practice-engine]
+
+  - id: improvmusic.engine.pathfinding-hints
+    project: ImprovMusic
+    subsystem: Engine
+    name: Pathfinding and Hint Routing
+    capability: Finds shortest modulation routes and alternative hint paths between the current and target tonal contexts.
+    status: partial
+    approach: Uses Dijkstra for shortest paths and a simplified Yen-style deviation pass to generate a few low-cost alternatives, then greedily prefers paths that introduce different techniques.
+    tech: [Swift, Foundation]
+    io: { in: "A modulation graph plus source and target contexts", out: "Shortest paths and technique-diverse hint routes with step-by-step evidence" }
+    code_refs: [ImprovMusic/Engine/Pathfinder.swift, docs/manual-tests/phase-3-challenge-engine.md, ledger/PROJECT.md]
+    known_gaps: ["The k-shortest implementation is explicitly simplified and not a full Yen's algorithm implementation.", "Diversity selection is greedy and cost-sensitive but does not globally optimise route variety.", "The UI currently surfaces only the first returned hint path, so alternative routes are computed but not fully exposed."]
+    match_keywords: [dijkstra, yen-k-shortest-paths, hint-routing, alternative-paths, route-diversity, graph-search]
+
+  - id: improvmusic.ui.app-shell-settings
+    project: ImprovMusic
+    subsystem: UI
+    name: App Shell and Settings Persistence
+    capability: Boots the single-screen SwiftUI app, restores prior practice settings, and persists key session preferences across launches.
+    status: working
+    approach: Starts from a SwiftUI app entrypoint, constructs the engine in the main view, and stores a small set of settings in UserDefaults through a main-actor helper.
+    tech: [SwiftUI, Foundation, UserDefaults]
+    io: { in: "App launch events and persisted defaults", out: "A configured challenge engine and restored UI session preferences" }
+    code_refs: [ImprovMusic/ImprovMusicApp.swift, ImprovMusic/Views/MainView.swift, ImprovMusic/Utilities/SettingsManager.swift]
+    known_gaps: []
+    match_keywords: [swiftui-app-shell, settings-persistence, userdefaults, app-bootstrap, session-restore]
+
+  - id: improvmusic.ui.practice-controls
+    project: ImprovMusic
+    subsystem: UI
+    name: Practice Controls and Key Selection
+    capability: Lets the player choose difficulty tier, trigger mode, timer interval, and starting key or randomisation.
+    status: working
+    approach: Implements compact SwiftUI menus, segmented controls, and a sheet-based key picker bound directly to the observable challenge engine.
+    tech: [SwiftUI]
+    io: { in: "User taps and selections for tiers, timing, and starting contexts", out: "Updated engine settings and current-context changes" }
+    code_refs: [ImprovMusic/Views/ControlsView.swift]
+    known_gaps: ["The manual UI brief still mentions a 15-second timer option, but the implemented picker only offers 1-5 minute intervals."]
+    match_keywords: [practice-controls, key-picker, timer-controls, difficulty-selector, swiftui-form-controls]
+
+  - id: improvmusic.ui.practice-visualisation
+    project: ImprovMusic
+    subsystem: UI
+    name: Practice Visualisation and Hints
+    capability: Displays the current and target keys, renders the piano keyboard highlight state, and reveals modulation hints during a challenge.
+    status: partial
+    approach: Uses small SwiftUI views for key labels, a custom two-octave keyboard renderer, and a progressive-disclosure hint card bound to the current challenge.
+    tech: [SwiftUI]
+    io: { in: "Current context and active challenge state", out: "On-screen key names, keyboard highlights, tier badges, and hint text" }
+    code_refs: [ImprovMusic/Views/MainView.swift, ImprovMusic/Views/KeyDisplayView.swift, ImprovMusic/Views/KeyboardView.swift, ImprovMusic/Views/HintView.swift, docs/manual-tests/phase-4-ui.md]
+    known_gaps: ["`KeyboardView` shows a single display context and does not implement the three-way current-vs-target overlay described in the UI manual brief.", "The keyboard renderer does not draw note names on keys even though the manual UI brief expects them.", "Colour choices and readability refinements are still called out for later physical-device calibration in the ledger."]
+    match_keywords: [keyboard-visualisation, challenge-display, progressive-hints, piano-ui, scale-highlighting, swiftui-visualisation]
